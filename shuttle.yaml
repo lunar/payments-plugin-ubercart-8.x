@@ -1,0 +1,5 @@
+plan: false
+
+vars:
+  service: payments-plugin-ubercart-8.x
+  squad: juno
