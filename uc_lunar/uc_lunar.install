@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * Implements hook_requirements().
+ */
+function uc_lunar_requirements($phase) {
+  $requirements = [];
+  if ($phase == 'install') {
+    if (!class_exists('\Paylike\Paylike')) {
+      $requirements['uc_lunar_library'] = [
+        'description' => t('Lunar payment gateway requires the Paylike PHP API Library <a href="@url" target="_blank">@url</a>.', ['@url' => 'https://github.com/paylike/php-api/releases']),
+        'severity' => REQUIREMENT_ERROR,
+      ];
+    }
+  }
+
+  return $requirements;
+}

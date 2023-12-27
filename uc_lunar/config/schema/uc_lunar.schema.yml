@@ -1,0 +1,23 @@
+payment_method.settings.lunar:
+  mapping:
+    testmode:
+      type: boolean
+      label: 'Test mode'
+    test_public_key:
+      type: string
+      label: 'Test public API key'
+    test_private_key:
+      type: string
+      label: 'Test private API key'
+    live_public_key:
+      type: string
+      label: 'Public API key'
+    live_private_key:
+      type: string
+      label: 'Private API key'
+    description:
+      type: text
+      label: 'Payment method description'
+    popup_title:
+      type: string
+      label: 'Popup title'
