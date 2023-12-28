@@ -1,4 +1,4 @@
-# Lunar Online Payments plugin for Ubercart 8.x
+# Lunar Online Payments plugin for Ubercart 8.x-4.x
 
 ## Supported Ubercart versions
 
@@ -7,7 +7,7 @@
 ## Installation
 
 Once you have installed Ubercart on your Drupal setup, follow these simple steps:
-1. Signup at [lunar.app](https://lunar.app) (it’s free)
+1. Signup at [lunar.app](https://lunar.app) (it's free)
 1. Create an account
 1. Create an app key for your Drupal website
 1. Upload the ```uc_lunar.zip``` trough the Drupal Admin (You can also find the latest release at https://www.drupal.org/project/uc_lunar)
@@ -15,7 +15,9 @@ Once you have installed Ubercart on your Drupal setup, follow these simple steps
 If you use `composer require drupal/uc_lunar` you can skip this step.
 1. Activate the plugin through the 'Extend' screen in Drupal.
 1. Visit your Ubercart Store Administration page, Configuration section, and enable the gateway under the Payment methods. (admin/store/config/payment)
-1. Select the default credit transaction type. This ?module supports immediate or delayed capture modes. Immediate capture will be done when users confirm their orders. In delayed mode administrator should capture the money manually from orders administration page (admin/store/orders/view). Select an order and click "Process card" button in Payment block on the top. Check "PRIOR AUTHORIZATIONS" block to manually capture a needed amount of money.
+1. Select the default credit transaction type. This module supports immediate or delayed capture modes. 
+   - Immediate capture will be done when users confirm their orders. 
+   - In delayed mode administrator should capture the money manually from orders administration page (admin/store/orders/view). Select an order and click "Process card" button in Payment block on the top. Check "PRIOR AUTHORIZATIONS" block to manually capture a needed amount of money.
 1. Insert Lunar API keys, from https://lunar.app (admin/store/config/payment/method/credit_card)
 
 ## Updating settings

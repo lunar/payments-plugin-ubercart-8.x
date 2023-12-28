@@ -21,3 +21,23 @@ payment_method.settings.lunar:
     popup_title:
       type: string
       label: 'Popup title'
+payment_method.settings.lunarmobilepay:
+  mapping:
+    app_key:
+      type: string
+      label: 'Private API key'
+    public_key:
+      type: string
+      label: 'Public API key'
+    logo_url:
+      type: string
+      label: 'Logo URL'
+    configuration_id:
+      type: string
+      label: 'Configuration ID'
+    description:
+      type: text
+      label: 'Payment method description'
+    shop_title:
+      type: string
+      label: 'Shop title'
