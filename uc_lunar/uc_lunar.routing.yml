@@ -1,0 +1,17 @@
+# Redirect
+uc_lunar.redirect:
+  path: '/uc_lunar/redirect'
+  defaults:
+    _controller: '\Drupal\uc_lunar\Controller\LunarController::redirectToLunar'
+    _title: 'Lunar redirect'
+  requirements:
+    _permission: 'access content'
+
+# Callback
+uc_lunar.complete:
+  path: '/uc_lunar/complete/{uc_order}'
+  defaults:
+    _controller: '\Drupal\uc_lunar\Controller\LunarController::complete'
+    _title: 'Lunar payment complete'
+  requirements:
+    _permission: 'access content'
