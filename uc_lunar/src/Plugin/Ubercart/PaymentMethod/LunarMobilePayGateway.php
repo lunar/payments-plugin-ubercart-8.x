@@ -2,13 +2,16 @@
 
 namespace Drupal\uc_lunar\Plugin\Ubercart\PaymentMethod;
 
-use Drupal\Component\Utility\Html;
+use Drupal\Core\Url;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\uc_credit\CreditCardPaymentMethodBase;
+use Drupal\Component\Utility\Html;
 use Drupal\uc_order\OrderInterface;
+use Drupal\uc_payment\PaymentMethodPluginBase;
+use Drupal\uc_payment\OffsitePaymentMethodPluginInterface;
 
-use Paylike\Exception\ApiException;
-use Paylike\Data\Currencies;
+use Lunar\Lunar;
+use Lunar\Exception\ApiException;
 
 /**
  *  Ubercart gateway payment method.
@@ -19,15 +22,54 @@ use Paylike\Data\Currencies;
  *   name = @Translation("Lunar MobilePay gateway"),
  * )
  */
-class LunarMobilePayGateway extends CreditCardPaymentMethodBase
+class LunarMobilePayGateway extends PaymentMethodPluginBase implements OffsitePaymentMethodPluginInterface
 {
-
   /** Lunar Ubercart plugin version. */
   const MODULE_VERSION = '8.x-2.0';
-  /**
-   * @var \Paylike\Paylike
-   */
+
   protected $apiClient;
+  private $paymentMethodCode = 'mobilePay';
+
+  /**
+   * 
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, Connection $database)
+  {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $database);
+
+    if (!empty($this->configuration['app_key'])) {
+      $this->apiClient = new Lunar($this->configuration['app_key'], null, true);
+    }
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDisplayLabel($label)
+  {
+    $build['#attached']['library'][] = 'uc_lunar/uc_lunar.css';
+    $build['label'] = [
+      '#plain_text' => $label,
+    ];
+
+    $cc_types = [
+      'visa' => $this->t('Visa'),
+      'visaelectron' => $this->t('Visa Electron'),
+      'mastercard' => $this->t('MasterCard'),
+      'maestro' => $this->t('Maestro'),
+    ];
+
+    foreach ($cc_types as $type => $description) {
+      $build['image'][$type] = [
+        '#theme' => 'image',
+        '#uri' => drupal_get_path('module', 'uc_lunar') . '/images/' . $type . '.png',
+        '#alt' => $description,
+        '#attributes' => ['class' => ['uc-lunar-card']],
+      ];
+    }
+    return $build;
+  }
 
   /**
    * {@inheritdoc}
@@ -47,14 +89,15 @@ class LunarMobilePayGateway extends CreditCardPaymentMethodBase
    */
   public function defaultConfiguration()
   {
-    return parent::defaultConfiguration() + [
-      'txn_type' => UC_CREDIT_AUTH_CAPTURE,
-      'public_key' => '',
+    return [
+      // 'payment_method' => 'card',
+      'txn_type' => UC_CREDIT_AUTH_ONLY,
       'app_key' => '',
-      'logo_url' => '',
+      'public_key' => '',
       'configuration_id' => '',
-      'description' => '',
+      'logo_url' => '',
       'shop_title' => '',
+      'description' => 'Secure payment with MobilePay via © Lunar',
     ];
   }
 
@@ -63,51 +106,70 @@ class LunarMobilePayGateway extends CreditCardPaymentMethodBase
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state)
   {
-    $form = parent::buildConfigurationForm($form, $form_state);
-
-    $form['app_key'] = [
-      '#type' => 'textfield',
-      '#title' => t('App Key'),
-      '#description' => t('Private API key can be obtained by creating a merchant and adding an app through Lunar <a href="@dashboard" target="_blank">dashboard</a>.', ['@dashboard' => 'https://lunar.app/']),
-      '#default_value' => $this->configuration['app_key'],
+    return [
+      // 'payment_method' => [
+      //   '#type' => 'radios',
+      //   '#title' => $this->t('Payment method'),
+      //   '#default_value' => $this->configuration['payment_method'],
+      //   '#options' => [
+      //     'card' => $this->t('Card'),
+      //     'mobilePay' => $this->t('MobilePay'),
+      //   ],
+      // ],
+      'txn_type' => [
+        '#type' => 'radios',
+        '#title' => $this->t('Transaction type'),
+        '#default_value' => $this->configuration['txn_type'],
+        '#options' => [
+          UC_CREDIT_AUTH_CAPTURE => $this->t('Authorize and capture immediately'),
+          UC_CREDIT_AUTH_ONLY => $this->t('Authorization only'),
+        ],
+      ],
+      'app_key' => [
+        '#type' => 'textfield',
+        '#title' => t('App Key'),
+        '#description' => t('Private API key can be obtained by creating a merchant and adding an app through Lunar <a href="@dashboard" target="_blank">dashboard</a>.', ['@dashboard' => 'https://lunar.app/']),
+        '#default_value' => $this->configuration['app_key'],
+      ],
+      'public_key' => [
+        '#type' => 'textfield',
+        '#title' => t('Public Key'),
+        '#description' => t('Public API key.'),
+        '#default_value' => $this->configuration['public_key'],
+      ],
+      'configuration_id' => [
+        '#type' => 'textfield',
+        '#title' => t('Configuration ID'),
+        '#description' => t('Email onlinepayments@lunar.app to get it'),
+        '#default_value' => $this->configuration['configuration_id'],
+      ],
+      'logo_url' => [
+        '#type' => 'textfield',
+        '#title' => t('Logo URL'),
+        '#description' => t('Must be a link begins with "https://" to a JPG, JPEG or PNG file'),
+        '#default_value' => $this->configuration['logo_url'],
+      ],
+      'shop_title' => [
+        '#type' => 'textfield',
+        '#title' => t('Shop title'),
+        '#description' => t('The title shown in the page where the customer is redirected. Leave blank to show the site name.'),
+        '#default_value' => $this->configuration['shop_title'],
+      ],
+      'description' => [
+        '#type' => 'textarea',
+        '#title' => t('Payment method description'),
+        '#description' => t('Description on checkout page.'),
+        '#default_value' => $this->configuration['description'],
+      ],
     ];
+  }
 
-    $form['public_key'] = [
-      '#type' => 'textfield',
-      '#title' => t('Public Key'),
-      '#description' => t('Public API key.'),
-      '#default_value' => $this->configuration['public_key'],
-    ];
-
-    $form['logo_url'] = [
-      '#type' => 'textfield',
-      '#title' => t('Logo URL'),
-      '#description' => t('A valid url to shop logo'),
-      '#default_value' => $this->configuration['logo_url'],
-    ];
-
-    $form['configuration_id'] = [
-      '#type' => 'textfield',
-      '#title' => t('Configuration ID'),
-      '#description' => t('Email onlinepayments@lunar.app to get it'),
-      '#default_value' => $this->configuration['configuration_id'],
-    ];
-
-    $form['description'] = [
-      '#type' => 'textarea',
-      '#title' => t('Payment method description'),
-      '#description' => t('Description on checkout page.'),
-      '#default_value' => $this->configuration['description'],
-    ];
-
-    $form['shop_title'] = [
-      '#type' => 'textfield',
-      '#title' => t('Popup title'),
-      '#description' => t('Payment popup title. Leave blank to show the site name.'),
-      '#default_value' => $this->configuration['popup_title'],
-    ];
-
-    return $form;
+  /**
+   * {@inheritdoc}
+   */
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state)
+  {
+    // @TODO validate keys or other fields
   }
 
   /**
@@ -116,146 +178,39 @@ class LunarMobilePayGateway extends CreditCardPaymentMethodBase
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state)
   {
     $items = [
+      // 'payment_method',
+      'txn_type',
       'app_key',
       'public_key',
-      'logo_url',
       'configuration_id',
-      'description',
+      'logo_url',
       'shop_title',
+      'description',
     ];
+
     foreach ($items as $item) {
       $this->configuration[$item] = $form_state->getValue($item);
     }
-
-    return parent::submitConfigurationForm($form, $form_state);
   }
 
-  public function cartDetails(OrderInterface $order, array $form, FormStateInterface $form_state)
+
+  /**
+   * @return array
+   */
+  public function buildRedirectForm(array $form, FormStateInterface $form_state, OrderInterface $order)
   {
-    $form = [
-      '#type' => 'container',
-      '#attributes' => ['class' => 'uc-lunar-form'],
-    ];
+    $form['#action'] = Url::fromRoute('uc_lunar.redirect',
+      ['uc_order' => $order->id()], ['absolute' => true])->toString();
 
-    // Products info
-    $products = [];
-    foreach ($order->products as $product) {
-      $products[$product->id()] = [
-        'id' => $product->id(),
-        'SKU' => $product->model->value,
-        'title' => $product->title->value,
-        'price' => uc_currency_format($product->price->value),
-        'quantity' => $product->qty->value,
-        'total' => uc_currency_format($product->price->value * $product->qty->value),
-      ];
-    }
-
-    $ubercartInfo = \Drupal::service('extension.list.module')->getExtensionInfo('uc_cart');
-
-    $testMode = true; // !! USE cookie
-
-    $currency = $order->getCurrency();
-
-    $allCurrencies = (new Currencies)->all();
-
-    $exponent = isset($allCurrencies[$currency]) ? ($allCurrencies[$currency]['exponent']) : (null);
-
-    // Payment popup settings
-    $config = [
-      'locale' => \Drupal::languageManager()->getCurrentLanguage()->getId(),
-      'title' => $this->getPopupTitle(),
-      'test' => $testMode,
-      'amount' => [
-        'currency' => $currency,
-        'exponent' => $exponent,
-        'value' => (int)(uc_currency_format($order->getTotal(), false, false, false)),
-      ],
-      'custom' => [
-        'email' => $order->getEmail(),
-        'orderId' => $order->id(),
-        'products' => $products,
-        'customer' => [
-          'email' => $order->getEmail(),
-          'IP' => \Drupal::request()->getClientIp(),
-          'name' => '', // Empty at this moment
-          'address' => '',
-        ],
-        'platform' => [
-          'name' => 'Drupal',
-          'version' => \DRUPAL::VERSION,
-        ],
-        'ecommerce' => [
-          'name' => 'Ubercart',
-          'version' => $ubercartInfo['version'],
-        ],
-        'lunarPluginVersion' => [
-          'version' => self::MODULE_VERSION,
-        ],
-      ],
-    ];
-
-    $form['#attached']['drupalSettings']['uc_lunar'] = [
-      'publicKey' => $this->configuration['public_key'],
-      'config' => $config,
-    ];
-    $form['#attached']['library'][] = 'uc_lunar/form';
-
-    $form['lunar_transaction_id'] = [
-      '#type' => 'hidden',
-      '#attributes' => [
-        'id' => 'lunar_transaction_id',
-      ],
-    ];
-    $form['lunar_button'] = [
-      '#type' => 'button',
-      '#value' => $this->t('Enter credit card details'),
-      '#attributes' => [
-        'class' => ['lunar-button'],
-      ],
-      '#prefix' => $this->getPaymentMethodDescription(),
-    ];
-    // Needed to remove cc_number notice on submitForm().
-    $form['cc_number'] = [
-      '#type' => 'hidden',
-      '#value' => '1111',
+    $form['actions'] = ['#type' => 'actions'];
+    $form['actions']['submit'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Submit order'),
     ];
 
     return $form;
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function cartProcess(OrderInterface $order, array $form, FormStateInterface $form_state)
-  {
-    $transactionId = $form_state->getValue(['panes', 'payment', 'details', 'lunar_transaction_id']);
-
-    // Load transaction ID from order
-    if (empty($transactionId) && !empty($order->data->uc_lunar['transaction_id'])) {
-      $transactionId = $order->data->uc_lunar['transaction_id'];
-    }
-
-    if (!empty($transactionId)) {
-      $transaction = $this->getTransaction($transactionId);
-      $card = $transaction['card'];
-      $expiry = new \DateTime($card['expiry']);
-
-      $data = [
-        'transaction_id' => $transactionId,
-        'payment_details' => [
-          'cc_number' => $card['last4'],
-          'cc_type' => $card['scheme'],
-          'cc_exp_month' => $expiry->format('m'),
-          'cc_exp_year' => $expiry->format('Y'),
-        ],
-      ];
-      $order->data->uc_lunar = $data;
-    } else {
-      $form_state->setErrorByName('panes][payment][details][lunar_button', $this->t('Payment failed.'));
-      return false;
-    }
-    return true;
-  }
 
   /**
    * {@inheritdoc}
@@ -368,14 +323,6 @@ class LunarMobilePayGateway extends CreditCardPaymentMethodBase
     }
   }
 
-  /**
-   * Returns popup title.
-   * @return string
-   */
-  public function getPopupTitle()
-  {
-    return !empty($this->configuration['popup_title']) ? $this->configuration['popup_title'] : \Drupal::config('system.site')->get('name');
-  }
 
   /**
    * Returns payment method description.
@@ -391,22 +338,19 @@ class LunarMobilePayGateway extends CreditCardPaymentMethodBase
    */
   public function cartReviewTitle()
   {
-    return $this->t('Lunar');
+    return $this->configuration['label'];
   }
 
   /**
    * Load API.
    * @return bool
    */
-  public function prepareApi()
+  private function prepareApi()
   {
-    if ($this->apiClient) return true;
-
-    $privateKey = $this->configuration['testmode'] ? $this->configuration['test_app_key'] : $this->configuration['live_app_key'];
     try {
-      $this->apiClient = new \Paylike\Paylike($privateKey);
+      $this->apiClient = new Lunar($this->configuration['app_key'], null, true);
     } catch (ApiException $e) {
-      \Drupal::logger('uc_lunar')->notice($this->t('Lunar is not properly configured. Payments will not be processed: @error', ['@error' => $e->getMessage()]));
+      \Drupal::logger('uc_lunar')->notice($this->t("Lunar method {$this->paymentMethodCode} is not properly configured. Payments will not be processed: @error", ['@error' => $e->getMessage()]));
       return false;
     }
     return true;
