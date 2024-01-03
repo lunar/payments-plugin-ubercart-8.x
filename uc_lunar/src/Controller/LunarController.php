@@ -3,26 +3,24 @@
 namespace Drupal\uc_lunar\Controller;
 
 use Drupal\Core\Url;
-use Drupal\Core\Routing\RequestContext;
 use Drupal\Core\Controller\ControllerBase;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\uc_lunar\Plugin\Ubercart\PaymentMethod\LunarMobilePayGateway;
-use Drupal\uc_order\OrderInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\uc_order\Entity\Order;
 use Drupal\uc_payment\Plugin\PaymentMethodManager;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Routing\TrustedRedirectResponse;
-
 use Lunar\Lunar;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * 
  */
-class LunarController extends ControllerBase
+class LunarController extends ControllerBase implements ContainerInjectionInterface
 {
   const REMOTE_URL = 'https://pay.lunar.money/?id=';
   const TEST_REMOTE_URL = 'https://hosted-checkout-git-develop-lunar-app.vercel.app/?id=';
@@ -31,7 +29,6 @@ class LunarController extends ControllerBase
   private $session;
   private $dateTime;
   private $database;
-  private $requestContext;
 
 
   private $apiClient;
@@ -48,8 +45,7 @@ class LunarController extends ControllerBase
       $container->get('plugin.manager.uc_payment.method'),
       $container->get('session'),
       $container->get('datetime.time'),
-      $container->get('database'),
-      $container->get('router.request_context')
+      $container->get('database')
     );
   }
 
@@ -60,24 +56,21 @@ class LunarController extends ControllerBase
     PaymentMethodManager $payment_method_manager,
     SessionInterface $session,
     TimeInterface $date_time,
-    Connection $database,
-    RequestContext $requestContext
+    Connection $database
   ) {
     $this->paymentMethodManager = $payment_method_manager;
     $this->session = $session;
     $this->dateTime = $date_time;
     $this->database = $database;
-    $this->requestContext = $requestContext;
 
-    $orderId = str_replace('uc_order=', '', $this->requestContext->getQueryString());
-
-    $this->order = Order::load($orderId);
+    $request = \Drupal::request();
+    $this->order = Order::load($request->get('uc_order'));
 
     $paymentMethod = $this->paymentMethodManager->createFromOrder($this->order);
 
     $this->configuration = $paymentMethod->getConfiguration();
 
-    $this->testMode = true; // Get it from cookie
+    $this->testMode = !! $request->cookies->get('lunar_testmode');
 
     if ($this->getConfig('app_key')) {
       $this->apiClient = new Lunar($this->getConfig('app_key'), null, $this->testMode);
@@ -141,10 +134,11 @@ class LunarController extends ControllerBase
           'version' => \Drupal::service('extension.list.module')->getExtensionInfo('uc_cart')['version'],
         ],
         'lunarPluginVersion' => [
-          'version' => '2.0.0.0', // @TODO get it properly
+          'version' => Yaml::parseFile(dirname(__DIR__, 2) . '/uc_lunar.info.yml')['version'],
         ],
       ],
-      'redirectUrl' => Url::fromRoute('uc_lunar.complete', ['uc_order' => $order->id()], ['absolute' => true])->toString(),
+      'redirectUrl' => Url::fromRoute('uc_lunar.callback', ['uc_order' => $order->id()], 
+                        ['absolute' => true])->toString(),
       'preferredPaymentMethod' => $this->paymentMethodCode,
     ];
 
@@ -156,38 +150,40 @@ class LunarController extends ControllerBase
       ];
     }
 
-    if (true) {
+    if ($this->testMode) {
       $args['test'] = $this->getTestObject();
     }
 
     $paymentIntentId = $this->apiClient->payments()->create($args);
 
-
     $redirectUrl = ($this->testMode ? self::TEST_REMOTE_URL : self::REMOTE_URL) . $paymentIntentId;
 
+    $response = new TrustedRedirectResponse($redirectUrl, Response::HTTP_FOUND);
+    $response->send();
 
-    return new TrustedRedirectResponse($redirectUrl);
+    // Have to exit as a return will add additional headers and html code.
+    exit;
   }
 
   /**
    * @return \Symfony\Component\HttpFoundation\RedirectResponse
    *   A redirect to the cart or checkout complete page.
    */
-  public function complete(OrderInterface $uc_order)
+  public function callback()
   {
-    if (!$this->session->has('cart_order') || intval($this->session->get('cart_order')) != $uc_order->id()) {
+    if (!$this->session->has('cart_order') || intval($this->session->get('cart_order')) != $this->order->id()) {
       $this->messenger()->addMessage($this->t('Thank you for your order! 
         You\'ll be notified once your payment has been processed.'));
       return $this->redirect('uc_cart.cart');
     }
 
-    $method = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($uc_order);
+    $method = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($this->order);
     if (!$method instanceof LunarMobilePayGateway) {
       return $this->redirect('uc_cart.cart');
     }
 
     // This lets us know it's a legitimate access of the complete page.
-    $this->session->set('uc_checkout_complete_' . $uc_order->id(), true);
+    $this->session->set('uc_checkout_complete_' . $this->order->id(), true);
 
     return $this->redirect('uc_cart.checkout_complete');
   }

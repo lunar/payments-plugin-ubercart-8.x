@@ -41,7 +41,25 @@ class LunarMobilePayGateway extends PaymentMethodPluginBase implements OffsitePa
       $this->apiClient = new Lunar($this->configuration['app_key'], null, true);
     }
   }
+  
+  /**
+   * @return array
+   */
+  public function buildRedirectForm(array $form, FormStateInterface $form_state, OrderInterface $order)
+  {
+    $form['#action'] = Url::fromRoute('uc_lunar.redirect',
+      ['uc_order' => $order->id()], ['absolute' => true])->toString();
 
+    $form['actions'] = [
+      '#type' => 'actions',
+      'submit' => [
+        '#type' => 'submit',
+        '#value' => $this->t('Pay for order!'),
+      ],
+    ];
+
+    return $form;
+  }
 
   /**
    * {@inheritdoc}
@@ -192,25 +210,6 @@ class LunarMobilePayGateway extends PaymentMethodPluginBase implements OffsitePa
       $this->configuration[$item] = $form_state->getValue($item);
     }
   }
-
-
-  /**
-   * @return array
-   */
-  public function buildRedirectForm(array $form, FormStateInterface $form_state, OrderInterface $order)
-  {
-    $form['#action'] = Url::fromRoute('uc_lunar.redirect',
-      ['uc_order' => $order->id()], ['absolute' => true])->toString();
-
-    $form['actions'] = ['#type' => 'actions'];
-    $form['actions']['submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Submit order'),
-    ];
-
-    return $form;
-  }
-
 
   /**
    * {@inheritdoc}

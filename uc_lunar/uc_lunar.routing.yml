@@ -8,10 +8,10 @@ uc_lunar.redirect:
     _permission: 'access content'
 
 # Callback
-uc_lunar.complete:
-  path: '/uc_lunar/complete/{uc_order}'
+uc_lunar.callback:
+  path: '/uc_lunar/callback'
   defaults:
-    _controller: '\Drupal\uc_lunar\Controller\LunarController::complete'
-    _title: 'Lunar payment complete'
+    _controller: '\Drupal\uc_lunar\Controller\LunarController::callback'
+    _title: 'Lunar payment callback'
   requirements:
     _permission: 'access content'
