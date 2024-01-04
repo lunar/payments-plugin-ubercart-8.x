@@ -1,6 +1,7 @@
 <?php
 
 use \Drupal\Core\Form\FormStateInterface;
+use Drupal\uc_lunar\Plugin\Ubercart\PaymentMethod\LunarGatewayBase;
 
 /**
  * Implements hook_form_FORM_ID_alter().
@@ -15,8 +16,10 @@ function uc_lunar_form_uc_credit_terminal_form_alter(&$form, FormStateInterface 
   // Check if this payment method was used
   /** @var \Drupal\uc_payment\PaymentMethodPluginInterface $plugin */
   $plugin = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
-  $paymentMethod = $plugin->getPluginId();
-  if (!in_array($paymentMethod, ['lunar_gateway', 'lunar_mobilepay_gateway'])) return;
+
+  if (!$plugin instanceof LunarGatewayBase) {
+    return;
+  }
 
   $options = array();
   $form['specify_card']['#weight'] = 100;

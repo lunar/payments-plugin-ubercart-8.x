@@ -16,6 +16,8 @@ use Lunar\Lunar;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Yaml\Yaml;
 
+use Drupal\uc_lunar\Plugin\Ubercart\PaymentMethod\LunarGatewayBase;
+
 /**
  * 
  */
@@ -86,7 +88,7 @@ class LunarController extends ControllerBase implements ContainerInjectionInterf
     if (
       !$this->session->has('cart_order')
       || intval($this->session->get('cart_order')) != $this->order->id()
-      || !$method instanceof LunarMobilePayGateway
+      || !$method instanceof LunarGatewayBase
     ) {
       return $this->redirectWithNotification('Something was wrong. Try again');
     }
@@ -126,7 +128,7 @@ class LunarController extends ControllerBase implements ContainerInjectionInterf
     }
 
     $method = $this->paymentMethodManager->createFromOrder($this->order);
-    if (!$method instanceof LunarMobilePayGateway) {
+    if (!$method instanceof LunarGatewayBase) {
       return $this->redirect('uc_cart.checkout_review');
     }
 
