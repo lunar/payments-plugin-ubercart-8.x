@@ -1,20 +1,22 @@
 <?php
+
 use \Drupal\Core\Form\FormStateInterface;
 
 /**
  * Implements hook_form_FORM_ID_alter().
  * Shows refund form.
  */
-function uc_lunar_form_uc_credit_terminal_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-  // TODO: find a better way to get an order
-  $order = $form_state->getBuildInfo()['args'][0];
+function uc_lunar_form_uc_credit_terminal_form_alter(&$form, FormStateInterface $form_state, $form_id)
+{
+
+  $order = \Drupal::request()->get('uc_order');
   $form_state->set('uc_order', $order);
 
   // Check if this payment method was used
   /** @var \Drupal\uc_payment\PaymentMethodPluginInterface $plugin */
   $plugin = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
   $paymentMethod = $plugin->getPluginId();
-  if ($paymentMethod != 'lunar_gateway') return;
+  if (!in_array($paymentMethod, ['lunar_gateway', 'lunar_mobilepay_gateway'])) return;
 
   $options = array();
   $form['specify_card']['#weight'] = 100;
@@ -32,29 +34,38 @@ function uc_lunar_form_uc_credit_terminal_form_alter(&$form, FormStateInterface 
     }
   }
 
+  // autocomplete amount with that from order
+  $form['amount']['#default_value'] = $order->getTotal();
+
   if (!empty($options)) {
     $form['lunar_refund'] = [
       '#type' => 'details',
       '#title' => t('Lunar refund'),
       '#open' => true,
-    ];
-    $form['lunar_refund']['refund_transaction'] = array(
-      '#type' => 'radios',
-      '#title' => t('Select authorization to refund'),
-      '#options' => $options,
-    );
+      
+      'refund_transaction' =>[
+        '#type' => 'radios',
+        '#title' => t('Select authorization to refund'),
+        '#options' => $options,
+      ],
 
-    $form['lunar_refund']['actions'] = array('#type' => 'actions');
-    $form['lunar_refund']['actions']['refund'] = array(
-      '#type' => 'submit',
-      '#value' => t('Refund'),
-      '#validate' => array('uc_lunar_refund_form_validate'),
-      '#submit' => array('uc_lunar_refund_form_submit'),
-    );
+      'actions' => [
+        '#type' => 'actions',
+        'refund' => [
+          '#type' => 'submit',
+          '#value' => t('Refund'),
+          '#validate' => array('uc_lunar_refund_form_validate'),
+          '#submit' => array('uc_lunar_refund_form_submit'),
+        ]
+      ]
+    ];
+
   }
+
 }
 
-function uc_lunar_refund_form_validate($form, FormStateInterface $form_state) {
+function uc_lunar_refund_form_validate($form, FormStateInterface $form_state)
+{
   $amount = $form_state->getValue('amount');
   if (!$amount || $amount <= 0) {
     $form_state->setError($form['amount'], 'Amount must be a digital greater than 0.');
@@ -64,26 +75,43 @@ function uc_lunar_refund_form_validate($form, FormStateInterface $form_state) {
   }
 }
 
-function uc_lunar_refund_form_submit($form, FormStateInterface $form_state) {
+function uc_lunar_refund_form_submit($form, FormStateInterface $form_state)
+{
   $user = \Drupal::currentUser();
+
   $order = $form_state->get('uc_order');
+
   /** @var \Drupal\uc_payment\PaymentMethodPluginInterface $plugin */
   $plugin = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
+
   $transactionId = $form_state->getValue('refund_transaction');
+
   $amount = $form_state->getValue('amount');
-  $result = $plugin->refund($transactionId, uc_currency_format($amount, false, false, false));
-  $messenger = \Drupal::messenger();
+
+  $result = $plugin->refund($transactionId, [
+    'amount' => [
+      'currency' => $order->getCurrency(),
+      'decimal' => (string) $amount,
+    ]
+  ]);
+
   if ($result['successful']) {
     $message = t('Refund successfully made for @amount.', ['@amount' => uc_currency_format($amount)]);
-    $messenger->addMessage($message);
+    \Drupal::messenger()->addMessage($message);
+
     uc_order_comment_save($order->id(), $user->id(), $message, 'order');
-    $txns = $order->data->cc_txns;
-    $txns['authorizations'][$transactionId]['refunded'] = \Drupal::time()->getRequestTime();
-    $order->data->cc_txns = $txns;
+
+    $cc_txns = $order->data->cc_txns;
+    $cc_txns['authorizations'][$transactionId]['refunded'] = \Drupal::time()->getRequestTime();
+    $order->data->cc_txns = $cc_txns;
+    
+    $order->setStatusId('canceled');
+
     $order->save();
+    
   } else {
     $message = t('Refund failed. Transaction ID: @id. Message: @message', ['@id' => $transactionId, '@message' => $result['error']]);
-    $messenger->addMessage($message, $messenger::TYPE_ERROR);
+    \Drupal::messenger()->addMessage($message, \Drupal::messenger()::TYPE_ERROR);
     uc_order_comment_save($order->id(), $user->id(), $message, 'admin');
   }
 }
