@@ -6,9 +6,9 @@
 function uc_lunar_requirements($phase) {
   $requirements = [];
   if ($phase == 'install') {
-    if (!class_exists('\Paylike\Paylike')) {
+    if (!class_exists('\Lunar\Lunar')) {
       $requirements['uc_lunar_library'] = [
-        'description' => t('Lunar payment gateway requires the Paylike PHP API Library <a href="@url" target="_blank">@url</a>.', ['@url' => 'https://github.com/paylike/php-api/releases']),
+        'description' => t('Lunar payment gateway requires the Payments API SDK Library <a href="@url" target="_blank">@url</a>.', ['@url' => 'https://github.com/lunar/payments-api-sdk/releases']),
         'severity' => REQUIREMENT_ERROR,
       ];
     }

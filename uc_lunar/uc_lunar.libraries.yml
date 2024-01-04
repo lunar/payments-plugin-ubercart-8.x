@@ -1,12 +1,11 @@
-paylike:
-  remote: https://github.com/paylike/php-api
-  version: "1.0.8"
+lunar:
+  remote: https://github.com/lunar/payments-api-sdk
+  version: "1.0"
   license:
     name: MIT
-    url: https://github.com/paylike/php-api/blob/master/LICENSE.md
+    url: https://github.com/lunar/payments-api-sdk/blob/master/LICENSE.md
     gpl-compatible: true
-  js:
-    "https://sdk.paylike.io/a.js": { minified: true }
+  js: ""
 
 form:
   version: VERSION
@@ -19,4 +18,4 @@ form:
     - core/jquery
     - core/drupal
     - core/jquery.once
-    - uc_lunar/paylike
+    - uc_lunar/lunar

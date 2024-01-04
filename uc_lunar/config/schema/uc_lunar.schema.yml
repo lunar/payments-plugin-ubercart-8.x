@@ -1,28 +1,5 @@
 payment_method.settings.lunar:
   mapping:
-    testmode:
-      type: boolean
-      label: 'Test mode'
-    test_public_key:
-      type: string
-      label: 'Test public API key'
-    test_private_key:
-      type: string
-      label: 'Test private API key'
-    live_public_key:
-      type: string
-      label: 'Public API key'
-    live_private_key:
-      type: string
-      label: 'Private API key'
-    description:
-      type: text
-      label: 'Payment method description'
-    popup_title:
-      type: string
-      label: 'Popup title'
-payment_method.settings.lunarmobilepay:
-  mapping:
     app_key:
       type: string
       label: 'Private API key'
@@ -32,9 +9,26 @@ payment_method.settings.lunarmobilepay:
     logo_url:
       type: string
       label: 'Logo URL'
+    description:
+      type: text
+      label: 'Payment method description'
+    shop_title:
+      type: string
+      label: 'Shop title'
+payment_method.settings.lunarmobilepay:
+  mapping:
+    app_key:
+      type: string
+      label: 'Private API key'
+    public_key:
+      type: string
+      label: 'Public API key'
     configuration_id:
       type: string
       label: 'Configuration ID'
+    logo_url:
+      type: string
+      label: 'Logo URL'
     description:
       type: text
       label: 'Payment method description'
