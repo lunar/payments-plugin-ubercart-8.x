@@ -4,7 +4,6 @@ namespace Drupal\uc_lunar\Controller;
 
 use Drupal\Core\Url;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\uc_lunar\Plugin\Ubercart\PaymentMethod\LunarMobilePayGateway;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\uc_order\Entity\Order;
 use Drupal\uc_payment\Plugin\PaymentMethodManager;
