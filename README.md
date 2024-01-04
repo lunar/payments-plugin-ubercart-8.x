@@ -11,7 +11,7 @@ Once you have installed Ubercart on your Drupal setup, follow these simple steps
 1. Create an account
 1. Create an app key for your Drupal website
 1. Upload the ```uc_lunar.zip``` trough the Drupal Admin (You can also find the latest release at https://www.drupal.org/project/uc_lunar)
-1. Download and install the Paylike PHP Library version 1.0.8 or newer from https://github.com/paylike/php-api/releases. Use `composer require paylike/php-api` in the vendors folder.
+1. Download and install the Paylike PHP Library version 1.0.8 or newer from https://github.com/paylike/php-api/releases. Use `composer require lunar/payments-api-sdk` in the vendors folder.
 If you use `composer require drupal/uc_lunar` you can skip this step.
 1. Activate the plugin through the 'Extend' screen in Drupal.
 1. Visit your Ubercart Store Administration page, Configuration section, and enable the gateway under the Payment methods. (admin/store/config/payment)
@@ -30,7 +30,7 @@ Under the Lunar payment method settings, you can:
  * Change the capture type (Authorize+Capture / Authorize only)
 
  ## How to capture/refund/void
-- You can do capture/refund/void to an order using the Payment box in the order View Tab by press `Process card` link.
+- You can do capture/refund/void to an order using the Payment box in the order View Tab by press `Process Lunar transactions` link.
 - The amount for partial capture, refund or void can be specified in `Charge Amount` input field.
 
  1. Capture
