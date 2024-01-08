@@ -201,8 +201,9 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
    */
   public function cartDetails(OrderInterface $order, array $form, FormStateInterface $form_state)
   {
-    $form['#attached']['library'][] = 'uc_lunar/form';
-    return $form;
+    $build['#attached']['library'][] = 'uc_lunar/form';
+    $build['#markup'] = $this->t('Continue with checkout to complete payment.');
+    return $build;
   }
 
   /**
