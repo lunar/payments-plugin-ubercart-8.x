@@ -1,0 +1,11 @@
+{
+  "name": "lunar/plugin-ubercart8",
+  "description": "Lunar ubercart 8 gateway development",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Ionut Calara",
+      "email": "ionut.calara@gmail.com"
+    }
+  ]
+}

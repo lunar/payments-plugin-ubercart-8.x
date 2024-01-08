@@ -1,0 +1,8 @@
+name: Ubercart Lunar
+type: module
+description: 'Lunar Online Payments plugin for Ubercart 8.x-4.x'
+package: 'Ubercart - payment'
+version: 8.x-2.0
+core: 8.x
+dependencies:
+  - uc_credit
