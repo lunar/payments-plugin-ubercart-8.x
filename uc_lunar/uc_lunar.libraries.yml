@@ -18,4 +18,3 @@ form:
     - core/jquery
     - core/drupal
     - core/jquery.once
-    - uc_lunar/lunar

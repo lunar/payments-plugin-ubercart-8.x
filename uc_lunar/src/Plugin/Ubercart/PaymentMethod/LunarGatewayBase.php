@@ -3,10 +3,10 @@
 namespace Drupal\uc_lunar\Plugin\Ubercart\PaymentMethod;
 
 use Drupal\Core\Url;
-use Drupal\Core\Database\Connection;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Html;
 use Drupal\uc_order\OrderInterface;
+use Drupal\uc_payment\Entity\PaymentMethod;
 use Drupal\uc_payment\PaymentMethodPluginBase;
 use Drupal\uc_payment\OffsitePaymentMethodPluginInterface;
 
@@ -20,18 +20,6 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
 {
   protected $apiClient;
   protected $paymentMethodCode = '';
-
-  /**
-   * 
-   */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, Connection $database)
-  {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $database);
-	
-    if (!empty($this->configuration['app_key'])) {
-      $this->apiClient = new Lunar($this->configuration['app_key'], null, true);
-    }
-  }
   
   /**
    * @return array
@@ -57,7 +45,7 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
    */
   public function getDisplayLabel($label)
   {
-    $build['#attached']['library'][] = 'uc_lunar/uc_lunar.css';
+    $build['#attached']['library'][] = 'uc_lunar/form';
     $build['label'] = [
       '#plain_text' => $label,
     ];
@@ -84,7 +72,7 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
         '#theme' => 'image',
         '#uri' => drupal_get_path('module', 'uc_lunar') . '/images/mobilepay-logo.png',
         '#alt' => 'mobilepay-logo',
-        '#attributes' => ['class' => ['uc-lunar-card']],
+        '#attributes' => ['class' => ['uc-lunar-mobilepay']],
       ];
     }
 
@@ -194,7 +182,6 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state)
   {
     $items = [
-      // 'payment_method',
       'txn_type',
       'app_key',
       'public_key',
@@ -347,7 +334,12 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
    */
   public function cartReviewTitle()
   {
-    return $this->configuration['label'];
+    $methods = PaymentMethod::loadMultiple();
+    foreach ($methods as $method) {
+      if ($this->getPluginId() === $method->getPlugin()->getPluginId()) {
+        return $this->getDisplayLabel($method->label());
+      }
+    }
   }
 
   /**
@@ -357,7 +349,10 @@ abstract class LunarGatewayBase extends PaymentMethodPluginBase implements Offsi
   private function prepareApi()
   {
     try {
-      $this->apiClient = new Lunar($this->configuration['app_key'], null, true);
+      $request = \Drupal::request();
+      $testMode = !!$request->cookies->get('lunar_testmode');
+
+      $this->apiClient = new Lunar($this->configuration['app_key'], null, $testMode);
     } catch (ApiException $e) {
       \Drupal::logger('uc_lunar')->notice($this->t("Payment method is not properly configured. Payments will not be processed: @error", ['@error' => $e->getMessage()]));
       return false;
