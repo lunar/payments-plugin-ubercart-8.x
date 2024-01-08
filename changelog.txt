@@ -1,5 +1,8 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 8.x-2.0:
+- Migrated to hosted checkout flow & added MobilePay method
+
 ## 8.x-1.0:
 - Initial version
