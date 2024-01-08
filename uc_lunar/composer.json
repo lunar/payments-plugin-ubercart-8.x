@@ -1,10 +1,10 @@
 {
     "name": "drupal/uc_lunar",
     "type": "drupal-module",
-    "description": "Provides a Lunar payment method for Ubercart.",
+    "description": "Lunar Online Payments plugin for Ubercart 8.x-4.x",
     "homepage": "https://www.drupal.org/project/uc_lunar",
     "require": {
-        "drupal/ubercart": "^8.9",
-        "paylike/php-api": "^1.0.8"
+        "drupal/ubercart": "^4",
+        "lunar/payments-api-sdk": "^1.0"
     }
 }

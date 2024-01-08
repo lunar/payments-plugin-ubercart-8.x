@@ -1,6 +1,6 @@
 {
   "name": "lunar/plugin-ubercart8",
-  "description": "Lunar ubercart 8 gateway development",
+  "description": "Lunar Online Payments plugin for Ubercart 8.x-4.x",
   "license": "MIT",
   "authors": [
     {
